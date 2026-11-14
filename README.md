@@ -82,6 +82,8 @@ Linux/macOS startup scripts are supplied but were not executed here. Do not copy
 
 ## GitHub Pages preview
 
+The frontend now adapts the MIT-licensed Halyard template by Kedhareswer Naidu, retaining its steel/cobalt sky, orbital signals, scroll transitions and product tilt around the existing working review interface. See [template source and licence details](TEMPLATE-NOTICE.md). The local API, native analysis pipeline and Pages recording adapter are unchanged. Run `npm run dev` for the redesigned development interface; the API and worker still need to run as described below.
+
 The published site provides an interactive replay of two real native KiCad runs on an original synthetic fixture, with object highlighting, revision comparisons, coverage, review history and downloadable native project versions. Its persistent banner identifies recorded results. GitHub Pages cannot execute FastAPI, SQLite jobs or native KiCad; live uploads, notes and approved edits require the local application.
 
 In **Settings > Pages**, set **Source** to **GitHub Actions**. `.github/workflows/pages.yml` installs locked frontend dependencies, runs `npm run build:pages`, and deploys only `dist-pages/`. The Pages build uses `/circuitcheck/` as its base; `npm run build` still produces the working local application in `dist/` with `/` as its base. Do not publish the source folder directly: browsers cannot execute the TypeScript entry point without Vite's build step.

@@ -78,6 +78,18 @@ class KiCad:
             self.helps[key]=out
         return self.helps[key]
 
+    def pcb_model(self, source: Path, out: Path):
+        help = self.help(['pcb', 'export', 'glb'])
+        args = [self.exe, 'pcb', 'export', 'glb', '--output', out]
+        for flag in ('--subst-models', '--include-tracks', '--include-pads', '--include-silkscreen', '--include-soldermask'):
+            if flag in help:
+                args.append(flag)
+        code, log = run([*args, source], source.parent, out.with_suffix('.log'))
+        if code or not out.is_file() or out.read_bytes()[:4] != b'glTF':
+            raise EngineError('Native 3D export unavailable. ' + log[-700:])
+        return {'artifact': out.name, 'kind': '3d', 'file': source.name, 'view_box': [],
+                'message': 'Native KiCad model. Only assigned, resolvable component models are included; missing models are not invented.'}
+
     def report(self,source: Path,kind: str,out: Path,parity=False):
         cmd=['pcb','drc'] if kind=='DRC' else ['sch','erc']
         help=self.help(cmd)
@@ -257,7 +269,7 @@ def analyze(source:Path,artifacts:Path,manifest,progress=lambda _:None):
     engine=KiCad(artifacts)
     before=fingerprint(source)
     rules=hashlib.sha256(b''.join(p.read_bytes() for p in sorted(source.rglob('*')) if p.suffix in ('.kicad_pro','.kicad_dru'))).hexdigest()
-    key=hashlib.sha256(json.dumps([before,rules,engine.version,manifest['root'],manifest.get('rule_profile'),ADAPTER_VERSION,NORMALIZER_VERSION,'geometry-v1;schematic-sheets-v1;refill-zones;all-severities;full-page-svg-v2'],sort_keys=True).encode()).hexdigest()
+    key=hashlib.sha256(json.dumps([before,rules,engine.version,manifest['root'],manifest.get('rule_profile'),ADAPTER_VERSION,NORMALIZER_VERSION,'geometry-v1;schematic-sheets-v1;refill-zones;all-severities;full-page-svg-v2;glb-v1'],sort_keys=True).encode()).hexdigest()
     cache=artifacts/'result.json'
     if cache.exists():
         cached=json.loads(cache.read_text())
@@ -300,6 +312,12 @@ def analyze(source:Path,artifacts:Path,manifest,progress=lambda _:None):
                     previews.append(preview)
                 checks.append({'name':'Schematic preview & netlist','status':'completed','message':'SVG sheets and native connectivity exported.'})
         except EngineError as e: checks.append({'name':f'{kind} exports','status':'failed','message':str(e)})
+    if pcb.exists():
+        progress('Exporting native 3D model')
+        try:
+            previews.append(engine.pcb_model(pcb, artifacts/'board.glb'))
+        except EngineError as e:
+            manifest = {**manifest, 'notices': [*manifest['notices'], {'kind': '3d_preview', 'message': str(e)}]}
     if not pcb.exists() or not sch.exists() or dependencies_missing:
         checks.append({'name':'Schematic / PCB parity','status':'skipped','message':'Requires a matching complete schematic and board with project dependencies.'})
     else: checks.append({'name':'Schematic / PCB parity','status':'completed' if next((c['status']=='completed' for c in checks if c['name']=='DRC'),False) else 'failed','message':'Included in PCB DRC.'})

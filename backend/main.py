@@ -157,7 +157,7 @@ def artifact(id,rid,name):
     if r['project_id']!=id: raise HTTPException(404,'Not found')
     root=LocalStorage().revision(id,rid)/'artifacts'
     path=root.joinpath(*safe_path(name).parts).resolve()
-    if root.resolve() not in path.parents or not path.is_file() or path.suffix not in ('.svg','.json','.log','.xml'): raise HTTPException(404,'Artifact not found')
+    if root.resolve() not in path.parents or not path.is_file() or path.suffix not in ('.svg','.json','.log','.xml','.glb'): raise HTTPException(404,'Artifact not found')
     return FileResponse(path)
 
 class PreviewRequest(BaseModel): finding_id:str=Field(max_length=64)
