@@ -10,7 +10,9 @@ test('component labels identify library packages and hovering component bodies s
  await expect(label).toBeVisible();
  await label.hover();
  await expect(page.getByRole('tooltip')).toContainText('SOIC-16W_7.5x10.3mm_P1.27mm');
- await expect(page.getByRole('tooltip')).toContainText('16 pads');
+ await expect(page.getByRole('tooltip')).toContainText('16 pads (electrical contact points)');
+ await expect(page.getByRole('tooltip')).toContainText('A chip containing many tiny electronic circuits');
+ await expect(page.getByRole('tooltip')).toContainText('GND — ground / electrical reference');
  await label.focus();
  await expect(page.getByRole('tooltip')).toContainText('Integrated circuit');
  await page.getByLabel('Labels',{exact:true}).uncheck();
@@ -20,10 +22,12 @@ test('component labels identify library packages and hovering component bodies s
  expect(point).not.toBeNull();
  await page.mouse.move(point!.x,point!.y);
  await expect(page.getByRole('tooltip')).toContainText('U1');
- await expect(page.getByRole('tooltip')).toContainText('Nets:');
+ await expect(page.getByRole('tooltip')).toContainText('Connections (nets):');
  await page.getByLabel('Labels',{exact:true}).check();
  await page.getByRole('button',{name:'R1: Resistor',exact:true}).hover();
  await expect(page.getByRole('tooltip')).toContainText('R_1206_3216Metric');
+ await expect(page.getByRole('tooltip')).toContainText('Limits electric current');
+ await expect(page.getByRole('tooltip')).toContainText('3.2 × 1.6 mm');
  await page.locator('.native-model-stage').screenshot({path:'screenshots/3d-component-identifiers.png'});
 });
 
