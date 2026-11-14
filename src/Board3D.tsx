@@ -2,6 +2,7 @@ import {createElement,useEffect,useRef,useState} from 'react';
 import '@google/model-viewer';
 import type {Geometry,Preview} from './api';
 import {boardModel} from './boardModel';
+import AxisGizmo from './AxisGizmo';
 import {useFindingHighlights} from './FindingHighlights';
 import {useComponentLabels} from './ComponentLabels';
 import './board3d.css';
@@ -23,6 +24,6 @@ export default function Board3D({geometry,preview,...options}:{geometry?:Geometr
  return <div className="board3d"><div className="board3d-toolbar"><div><button onClick={()=>magnify(1/1.25)} aria-label="Zoom out 3D">−</button><span>{Math.round(zoom*100)}%</span><button onClick={()=>magnify(1.25)} aria-label="Zoom in 3D">+</button><button onClick={reset}>Reset view</button><button onClick={()=>orbit(0,.001)}>Top</button><button onClick={()=>orbit(0,Math.PI-.001)}>Bottom</button></div>{identifiers.control}<label><input type="checkbox" checked={components} onChange={e=>setComponents(e.target.checked)}/>Components</label></div>
  {findingHighlights.controls}{error&&<p role="alert">{error}</p>}
  <div className="board3d-webgl" role="group" aria-label="Interactive 3D board preview" tabIndex={0} data-components={components?'visible':'hidden'} onKeyDown={e=>{const el=viewer.current;if(!el)return;if(e.key.startsWith('Arrow')){e.preventDefault();const o=el.getCameraOrbit();orbit(o.theta+(e.key==='ArrowLeft'?-.15:e.key==='ArrowRight'?.15:0),Math.max(.001,Math.min(Math.PI-.001,o.phi+(e.key==='ArrowUp'?-.15:e.key==='ArrowDown'?.15:0))))}if(e.key.toLowerCase()==='f')reset()}}>
- {src&&createElement('model-viewer',{ref:viewer,src,tabIndex:0,loading:'eager','camera-controls':true,'touch-action':'none','shadow-intensity':'1','environment-image':'neutral','camera-orbit':'35deg 55deg auto','min-camera-orbit':'auto 0deg 10%','max-camera-orbit':'auto 180deg 500%',alt:'Board with representative resistors, capacitors, IC leads and connector pins',style:{display:'block',width:'100%',height:'480px'}},identifiers.hotspots,findingHighlights.markers)}{identifiers.details}
+ {src&&createElement('model-viewer',{ref:viewer,src,tabIndex:0,loading:'eager','camera-controls':true,'interaction-prompt':'none','touch-action':'none','shadow-intensity':'1','environment-image':'neutral','camera-orbit':'35deg 55deg auto','min-camera-orbit':'auto 0deg 10%','max-camera-orbit':'auto 180deg 500%',alt:'Board with representative resistors, capacitors, IC leads and connector pins',style:{display:'block',width:'100%',height:'480px'}},identifiers.hotspots,findingHighlights.markers)}{src&&<AxisGizmo viewer={viewer} source={src} cameraGroup={options.cameraGroup}/ >}{identifiers.details}
  </div>{findingHighlights.panel}<div className="board3d-hint">Drag to rotate · Scroll to zoom · Right-drag to pan · Arrow keys to orbit</div><p className="board3d-note">Representative package shapes from pad locations and component references. These are not manufacturer models. Board thickness, heights and rectangular outline are illustrative. Components on the far side are hidden by the board.</p></div>;
 }

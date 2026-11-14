@@ -21,6 +21,11 @@ export function selectedObjects(geometry:Geometry|undefined,options:Review3DOpti
 }
 interface Camera extends HTMLElement {cameraOrbit:string;cameraTarget:string;getCameraOrbit:()=>{theta:number;phi:number;radius:number};getCameraTarget:()=>{x:number;y:number;z:number};jumpCameraToGoal:()=>void}
 const cameras=new Map<string,Set<Camera>>();
+export function setCameraDirection(viewer:HTMLElement|null,group?:string,theta?:number,phi?:number){
+ if(!viewer)return;const camera=viewer as Camera,peers=group?cameras.get(group):undefined,targets=peers?.size?peers:new Set([camera]);
+ const orbit=theta===undefined?'35deg 55deg auto':`${theta}rad ${Math.max(.001,Math.min(Math.PI-.001,phi!))}rad ${camera.getCameraOrbit().radius}m`;
+ for(const target of targets){target.cameraOrbit=orbit;if(theta===undefined)target.cameraTarget='auto auto auto';if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)target.jumpCameraToGoal()}
+}
 // Direct camera events avoid rerendering both assemblies or feeding programmatic moves back.
 export function useLinkedCamera(viewer:RefObject<HTMLElement|null>,group:string|undefined,source:string){
  useEffect(()=>{const el=viewer.current as Camera|null;if(!el||!group)return;const peers=cameras.get(group)||new Set<Camera>();peers.add(el);cameras.set(group,peers);

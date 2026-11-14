@@ -15,7 +15,7 @@ test('component labels identify library packages and hovering component bodies s
  await expect(page.getByRole('tooltip')).toContainText('GND — ground / electrical reference');
  await label.focus();
  await expect(page.getByRole('tooltip')).toContainText('Integrated circuit');
- await page.getByLabel('Labels',{exact:true}).uncheck();
+ await page.getByLabel('Identifiers',{exact:true}).uncheck();
  await expect(label).toHaveCount(0);
  await model.scrollIntoViewIfNeeded();
  // Find an actual surface point on the centre IC, rather than hovering its label.
@@ -24,7 +24,7 @@ test('component labels identify library packages and hovering component bodies s
  await page.mouse.move(point!.x,point!.y);
  await expect(page.getByRole('tooltip')).toContainText('U1');
  await expect(page.getByRole('tooltip')).toContainText('Connections (nets):');
- await page.getByLabel('Labels',{exact:true}).check();
+ await page.getByLabel('Identifiers',{exact:true}).check();
  await page.getByRole('button',{name:'R1: Resistor',exact:true}).hover();
  await expect(page.getByRole('tooltip')).toContainText('R_1206_3216Metric');
  await expect(page.getByRole('tooltip')).toContainText('Limits electric current');

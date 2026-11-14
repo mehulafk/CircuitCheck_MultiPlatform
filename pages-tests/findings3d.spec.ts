@@ -26,7 +26,7 @@ test('3D shows error and warning markers, selects findings, and filters each sev
 test('severity highlights remain available in geometry mode with labels hidden',async({page})=>{
  await page.goto('./');await page.getByRole('button',{name:'3D',exact:true}).click();
  await page.getByRole('button',{name:'Geometry preview',exact:true}).click();
- await page.getByRole('checkbox',{name:'Labels',exact:true}).uncheck();
+ await page.getByRole('checkbox',{name:'Identifiers',exact:true}).uncheck();
  const model=page.locator('.board3d-webgl model-viewer');
  await expect.poll(()=>model.evaluate((el:any)=>el.loaded)).toBe(true);
  await expect(page.locator('[data-component-label]')).toHaveCount(0);
