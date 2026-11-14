@@ -269,7 +269,7 @@ def analyze(source:Path,artifacts:Path,manifest,progress=lambda _:None):
     engine=KiCad(artifacts)
     before=fingerprint(source)
     rules=hashlib.sha256(b''.join(p.read_bytes() for p in sorted(source.rglob('*')) if p.suffix in ('.kicad_pro','.kicad_dru'))).hexdigest()
-    key=hashlib.sha256(json.dumps([before,rules,engine.version,manifest['root'],manifest.get('rule_profile'),ADAPTER_VERSION,NORMALIZER_VERSION,'geometry-v1;schematic-sheets-v1;refill-zones;all-severities;full-page-svg-v2;glb-v1'],sort_keys=True).encode()).hexdigest()
+    key=hashlib.sha256(json.dumps([before,rules,engine.version,manifest['root'],manifest.get('rule_profile'),ADAPTER_VERSION,NORMALIZER_VERSION,'geometry-v1;schematic-sheets-v1;refill-zones;all-severities;full-page-svg-v2;glb-v1;component-metadata-v2'],sort_keys=True).encode()).hexdigest()
     cache=artifacts/'result.json'
     if cache.exists():
         cached=json.loads(cache.read_text())
@@ -324,6 +324,16 @@ def analyze(source:Path,artifacts:Path,manifest,progress=lambda _:None):
     if pcb.exists():
         try:geometry=board_index(pcb.read_text(encoding='utf-8-sig'))
         except (ValueError,TypeError,ArithmeticError) as e:checks.append({'name':'Object geometry','status':'failed','message':'Exact object mapping unavailable: '+str(e)})
+        for component in geometry['objects']:
+            for model in component.get('models', []):
+                relative=model['path'].replace('${KIPRJMOD}', str(pcb.parent))
+                if '${' in relative:continue  # Installed-library resolution belongs to KiCad.
+                try:
+                    candidate=(pcb.parent/relative).resolve()
+                    if source.resolve() in candidate.parents:
+                        model['available']=candidate.is_file()
+                except (OSError,ValueError):
+                    pass  # Invalid model references do not suppress electrical findings.
         native_python=Path(engine.exe).parent/('python.exe' if os.name=='nt' else 'python3')
         if native_python.is_file():
             try:
@@ -337,7 +347,7 @@ def analyze(source:Path,artifacts:Path,manifest,progress=lambda _:None):
                         untracked+=1;continue
                     prior=index.get(item['id'],{})
                     merged={**prior,**item}
-                    merged['signature']=signature({k:v for k,v in merged.items() if k not in ('id','signature')})
+                    merged['signature']=signature({k:v for k,v in merged.items() if k not in ('id','signature','footprint','manufacturer','part_number','models')})
                     index[item['id']]=merged
                 geometry['objects']=list(index.values())
                 geometry['native_engine']=native['engine']

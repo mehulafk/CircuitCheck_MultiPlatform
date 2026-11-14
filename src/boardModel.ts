@@ -1,15 +1,20 @@
-import type {Geometry,Preview} from './api';
+import type {BoardObject,Finding,Geometry,Preview} from './api';
 
 // Self-contained GLB meshes. Package shapes are illustrative when no native model exists.
-export function boardModel(geometry:Geometry,preview:Preview|undefined,components:boolean){
+export function boardModel(geometry:Geometry,preview:Preview|undefined,components:boolean,selectedIds:string[]=[],changes:{object:BoardObject;status:string}[]=[],findings:Finding[]=[]){
  const objects=geometry.objects,all=objects.flatMap(o=>o.points),bounds=preview?.bounds_mm||[Math.min(...all.map(p=>p[0])),Math.min(...all.map(p=>p[1])),Math.max(...all.map(p=>p[0])),Math.max(...all.map(p=>p[1]))];
  const [x0,y0,x1,y1]=bounds,cx=(x0+x1)/2,cy=(y0+y1)/2;
- const colors=[[.025,.28,.17,1],[.08,.085,.095,1],[.72,.74,.76,1],[.72,.48,.1,1],[.62,.43,.25,1],[.08,.24,.35,1]];
+ const colors=[[.025,.28,.17,1],[.08,.085,.095,1],[.72,.74,.76,1],[.72,.48,.1,1],[.62,.43,.25,1],[.08,.24,.35,1],[1,.65,.08,1],[.12,.8,.48,1],[.95,.25,.24,1],[.4,.55,1,1],[.95,.12,.15,1],[1,.55,.05,1]];
+ const severities=new Map<string,string>();
+ for(const f of findings)if(!f.excluded&&f.source!=='KiCad ERC')for(const id of f.board_object_ids||[]){if(severities.get(id)!=='error')severities.set(id,f.severity)}
+ let override:number|undefined;
  const groups=colors.map(()=>({positions:[] as number[],normals:[] as number[]}));
- const triangle=(a:number[],b:number[],c:number[],material:number)=>{const u=b.map((v,i)=>v-a[i]),v=c.map((v,i)=>v-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],l=Math.hypot(...n)||1;for(const p of [a,b,c]){groups[material].positions.push(p[0]-cx,p[2],cy-p[1]);groups[material].normals.push(n[0]/l,n[2]/l,-n[1]/l)}};
+ const triangle=(a:number[],b:number[],c:number[],material:number)=>{material=override??material;const u=b.map((v,i)=>v-a[i]),v=c.map((v,i)=>v-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],l=Math.hypot(...n)||1;for(const p of [a,b,c]){groups[material].positions.push(p[0]-cx,p[2],cy-p[1]);groups[material].normals.push(n[0]/l,n[2]/l,-n[1]/l)}};
  const box=(x:number,y:number,z:number,w:number,d:number,h:number,m:number)=>{const p=[[x-w/2,y-d/2,z],[x+w/2,y-d/2,z],[x+w/2,y+d/2,z],[x-w/2,y+d/2,z],[x-w/2,y-d/2,z+h],[x+w/2,y-d/2,z+h],[x+w/2,y+d/2,z+h],[x-w/2,y+d/2,z+h]];for(const [a,b,c,d] of [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]){triangle(p[a],p[b],p[c],m);triangle(p[a],p[c],p[d],m)}};
  box(cx,cy,-1.6,x1-x0,y1-y0,1.6,0);
  for(const o of objects){
+  const change=changes.find(c=>c.object.id===o.id)?.status;
+  override=selectedIds.includes(o.id)?6:change==='added'?7:change==='removed'?8:change?9:severities.get(o.id)==='error'?10:severities.get(o.id)==='warning'?11:undefined;
   const back=o.layer?.toUpperCase().startsWith('B.'),z=back?-1.67:.07;
   if(o.kind==='pad'&&o.points.length>=3){for(let i=1;i<o.points.length-1;i++)triangle([...o.points[0],z],[...o.points[i],z],[...o.points[i+1],z],3)}
   if(o.kind==='track')for(let i=1;i<o.points.length;i++){const a=o.points[i-1],b=o.points[i],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,w=Math.max(o.width||.2,.15)/2,dx=-(b[1]-a[1])/l*w,dy=(b[0]-a[0])/l*w;const p=[[a[0]+dx,a[1]+dy,z],[b[0]+dx,b[1]+dy,z],[b[0]-dx,b[1]-dy,z],[a[0]-dx,a[1]-dy,z]];triangle(p[0],p[1],p[2],3);triangle(p[0],p[2],p[3],3)}

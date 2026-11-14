@@ -17,8 +17,9 @@ test('component labels identify library packages and hovering component bodies s
  await expect(page.getByRole('tooltip')).toContainText('Integrated circuit');
  await page.getByLabel('Labels',{exact:true}).uncheck();
  await expect(label).toHaveCount(0);
+ await model.scrollIntoViewIfNeeded();
  // Find an actual surface point on the centre IC, rather than hovering its label.
- const point=await model.evaluate((el:any)=>{const r=el.getBoundingClientRect();for(let y=r.top+20;y<r.bottom-20;y+=5)for(let x=r.left+20;x<r.right-20;x+=5){const p=el.positionAndNormalFromPoint(x,y)?.position;if(p&&Math.abs(p.x)<3&&p.z< -2&&p.z> -6&&p.y>1)return {x,y}}return null});
+ const point=await model.evaluate((el:any)=>{const r=el.getBoundingClientRect();for(let y=r.top+20;y<r.bottom-20;y+=5)for(let x=r.left+20;x<r.right-20;x+=5){const p=el.positionAndNormalFromPoint(x,y)?.position;const target=document.elementFromPoint(x,y);if(!target||(!el.contains(target)&&target!==el)||target.closest('button'))continue;if(p&&Math.abs(p.x)<3&&p.z< -2&&p.z> -6&&p.y>1)return {x,y}}return null});
  expect(point).not.toBeNull();
  await page.mouse.move(point!.x,point!.y);
  await expect(page.getByRole('tooltip')).toContainText('U1');
@@ -33,6 +34,7 @@ test('component labels identify library packages and hovering component bodies s
 
 test('3D is available on the initial revision comparison screen',async({page})=>{
  await page.goto('./');
+ await page.getByRole('button',{name:'Revision comparison',exact:true}).click();
  const switcher=page.getByRole('group',{name:'Comparison design type',exact:true});
  await switcher.getByRole('button',{name:'3D',exact:true}).click();
  await expect(page.locator('.r2-comparison-boards model-viewer')).toHaveCount(2);
@@ -51,7 +53,7 @@ test('3D board supports orbit, presets, zoom and component visibility',async({pa
  await page.getByRole('button',{name:'Design review',exact:true}).click();
  await page.getByRole('button',{name:'3D',exact:true}).click();
  await page.getByRole('button',{name:'Geometry preview',exact:true}).click();
- const scene=page.getByRole('img',{name:'Interactive 3D board preview'});
+ const scene=page.getByRole('group',{name:'Interactive 3D board preview'});
  await expect(scene).toBeVisible();
  const model=scene.locator('model-viewer');
  await expect.poll(()=>model.evaluate((el:any)=>el.loaded)).toBe(true);
@@ -82,11 +84,11 @@ test('native GLB opens with camera controls and invalid files retain the current
  const json=Buffer.from(JSON.stringify(doc)),padded=Buffer.alloc(Math.ceil(json.length/4)*4,32);json.copy(padded);
  const header=Buffer.alloc(20);header.write('glTF');header.writeUInt32LE(2,4);header.writeUInt32LE(28+padded.length+positions.length,8);header.writeUInt32LE(padded.length,12);header.writeUInt32LE(0x4e4f534a,16);
  const binary=Buffer.alloc(8);binary.writeUInt32LE(36,0);binary.writeUInt32LE(0x004e4942,4);
- await page.locator('.native-model-open input').setInputFiles({name:'test-model.glb',mimeType:'model/gltf-binary',buffer:Buffer.concat([header,padded,binary,positions])});
+ await page.locator('.native-model-file').setInputFiles({name:'test-model.glb',mimeType:'model/gltf-binary',buffer:Buffer.concat([header,padded,binary,positions])});
  await expect(page.locator('model-viewer')).toBeVisible();
  await expect(page.locator('.native-model-stage > [role=status]')).toHaveCount(0,{timeout:20000});
  await expect(page.locator('model-viewer')).toHaveAttribute('camera-controls','');
- await page.locator('.native-model-open input').setInputFiles({name:'invalid.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('invalid')});
+ await page.locator('.native-model-file').setInputFiles({name:'invalid.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('invalid')});
  await expect(page.getByRole('alert')).toContainText('valid binary glTF');
  await expect(page.locator('model-viewer')).toBeVisible();
  await page.getByRole('button',{name:'Use project model'}).click();
