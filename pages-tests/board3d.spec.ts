@@ -1,5 +1,32 @@
 import {test,expect} from '@playwright/test';
 
+test('component labels identify library packages and hovering component bodies shows details',async({page})=>{
+ await page.goto('./');
+ await page.getByRole('button',{name:'Design review',exact:true}).click();
+ await page.getByRole('button',{name:'3D',exact:true}).click();
+ const model=page.locator('.native-model-stage model-viewer');
+ await expect.poll(()=>model.evaluate((el:any)=>el.loaded)).toBe(true);
+ const label=page.getByRole('button',{name:'U1: Integrated circuit',exact:true});
+ await expect(label).toBeVisible();
+ await label.hover();
+ await expect(page.getByRole('tooltip')).toContainText('SOIC-16W_7.5x10.3mm_P1.27mm');
+ await expect(page.getByRole('tooltip')).toContainText('16 pads');
+ await label.focus();
+ await expect(page.getByRole('tooltip')).toContainText('Integrated circuit');
+ await page.getByLabel('Labels',{exact:true}).uncheck();
+ await expect(label).toHaveCount(0);
+ // Find an actual surface point on the centre IC, rather than hovering its label.
+ const point=await model.evaluate((el:any)=>{const r=el.getBoundingClientRect();for(let y=r.top+20;y<r.bottom-20;y+=5)for(let x=r.left+20;x<r.right-20;x+=5){const p=el.positionAndNormalFromPoint(x,y)?.position;if(p&&Math.abs(p.x)<3&&p.z< -2&&p.z> -6&&p.y>1)return {x,y}}return null});
+ expect(point).not.toBeNull();
+ await page.mouse.move(point!.x,point!.y);
+ await expect(page.getByRole('tooltip')).toContainText('U1');
+ await expect(page.getByRole('tooltip')).toContainText('Nets:');
+ await page.getByLabel('Labels',{exact:true}).check();
+ await page.getByRole('button',{name:'R1: Resistor',exact:true}).hover();
+ await expect(page.getByRole('tooltip')).toContainText('R_1206_3216Metric');
+ await page.locator('.native-model-stage').screenshot({path:'screenshots/3d-component-identifiers.png'});
+});
+
 test('3D is available on the initial revision comparison screen',async({page})=>{
  await page.goto('./');
  const switcher=page.getByRole('group',{name:'Comparison design type',exact:true});
