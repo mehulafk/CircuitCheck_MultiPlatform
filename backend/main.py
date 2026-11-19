@@ -12,7 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field
 from . import db, repairs
-from .config import ROOT,MAX_UPLOAD
+from .config import ROOT,MAX_UPLOAD,PUBLIC_ORIGIN
+from .deployment import origin_allowed
+from urllib.parse import urlsplit
 from .storage import LocalStorage,fingerprint
 from .uploads import unpack,inspect,safe_path
 from .engine import executable,compare
@@ -26,15 +28,14 @@ async def lifespan(app):
     yield
 
 app=FastAPI(title='CircuitCheck',version='0.2.1',lifespan=lifespan)
-app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]'])
+app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','testserver','[::1]']+([urlsplit(PUBLIC_ORIGIN).hostname] if PUBLIC_ORIGIN else []))
 
 @app.middleware('http')
 async def local_boundary(request:Request,call_next):
     if request.method not in ('GET','HEAD','OPTIONS'):
         origin=request.headers.get('origin')
-        from urllib.parse import urlparse
-        if (origin and urlparse(origin).hostname not in ('localhost','127.0.0.1','::1')) or request.headers.get('x-circuitcheck')!='1':
-            return JSONResponse({'detail':'Local API request rejected. Open CircuitCheck on localhost.'},status_code=403)
+        if not origin_allowed(origin,PUBLIC_ORIGIN) or request.headers.get('x-circuitcheck')!='1':
+            return JSONResponse({'detail':'API request rejected. Open CircuitCheck at its configured address.'},status_code=403)
         length=request.headers.get('content-length')
         if length and int(length)>MAX_UPLOAD+1024*1024: return JSONResponse({'detail':'Upload exceeds 25 MB'},status_code=413)
     response=await call_next(request)
@@ -83,7 +84,7 @@ def create_project(files,example=False):
 @app.get('/api/health')
 def health():
     import os
-    return {'status':'ok','engine_available':bool(executable()),'ai_available':bool(os.getenv('AI_API_KEY')),'tested_engine':'10.0.7','deployment':'local single-user'}
+    return {'status':'ok','engine_available':bool(executable()),'ai_available':bool(os.getenv('AI_API_KEY')),'tested_engine':'10.0.7','deployment':'private server workspace' if PUBLIC_ORIGIN else 'local single-user'}
 
 @app.get('/api/capabilities')
 def capabilities():

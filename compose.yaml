@@ -1,7 +1,7 @@
 services:
   api:
     build: .
-    image: circuitcheck:0.1.0
+    image: ${CIRCUITCHECK_IMAGE:-circuitcheck:local}
     ports: ["127.0.0.1:8000:8000"]
     volumes: ["designs:/data"]
     environment:
@@ -18,8 +18,13 @@ services:
     restart: unless-stopped
   worker:
     build: .
-    image: circuitcheck:0.1.0
+    image: ${CIRCUITCHECK_IMAGE:-circuitcheck:local}
     command: ["python", "-m", "backend.worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy
     volumes: ["designs:/data"]
     network_mode: none
     mem_limit: 1536m

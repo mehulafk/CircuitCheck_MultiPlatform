@@ -4,6 +4,14 @@ Review a KiCad PCB project before sending it for fabrication. CircuitCheck runs 
 
 ![CircuitCheck engineering review workspace](public/images/review-v2-workspace.png)
 
+## Deploy through GitHub
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete GitHub Actions build, container publishing and server deployment instructions. The full server runs live uploads, native KiCad checks, reports and the 3D viewer behind HTTPS and a password; GitHub Pages hosts the recorded demo and extension downloads.
+
+## Browser extension
+
+The original Circuit Check Multi-platform v0.6.2 extension and its simulator compatibility guide are included alongside this version's 3D controls. Download it from the app or [the release ZIP](public/downloads/Circuit-Check-Multi-platform-v0.6.2.zip). The original v0.6.1 archive is also retained.
+
 ## Start on Windows
 
 Extract the ZIP completely. For a new installation, double-click **Setup CircuitCheck.cmd** once; then double-click **Start CircuitCheck.cmd** and keep its server window open. The supplied production frontend does not require Node.js during setup. Python and KiCad remain runtime prerequisites. This configured computer can reuse its existing installation through the private `data/runtime.json` file. Reopening the launcher reuses an already running matching local server.
@@ -86,9 +94,9 @@ The frontend now adapts the MIT-licensed Halyard template by Kedhareswer Naidu, 
 
 The published site provides an interactive replay of two real native KiCad runs on an original synthetic fixture, with object highlighting, revision comparisons, coverage, review history and downloadable native project versions. Its persistent banner identifies recorded results. GitHub Pages cannot execute FastAPI, SQLite jobs or native KiCad; live uploads, notes and approved edits require the local application.
 
-In **Settings > Pages**, set **Source** to **GitHub Actions**. `.github/workflows/pages.yml` installs locked frontend dependencies, runs `npm run build:pages`, and deploys only `dist-pages/`. The Pages build uses `/circuitcheck/` as its base; `npm run build` still produces the working local application in `dist/` with `/` as its base. Do not publish the source folder directly: browsers cannot execute the TypeScript entry point without Vite's build step.
+In **Settings > Pages**, set **Source** to **GitHub Actions**. `.github/workflows/pages.yml` installs locked frontend dependencies, runs `npm run build:pages`, and deploys only `dist-pages/`. The Pages build uses `/CircuitCheck_MultiPlatform/` locally and derives the repository path in Actions; `npm run build` still produces the working local application in `dist/` with `/` as its base. Do not publish the source folder directly: browsers cannot execute the TypeScript entry point without Vite's build step.
 
-To preview the Pages build locally, run `npm run build:pages`, then `npm run preview -- --mode pages --outDir dist-pages --port 4173`. Visit `http://127.0.0.1:4173/circuitcheck/`. A full public analysis deployment would additionally require a server with KiCad, worker processes, persistent storage, authentication, project ownership checks and isolated execution; none is provisioned by this workflow.
+To preview the Pages build locally, run `npm run build:pages`, then `npm run preview -- --mode pages --outDir dist-pages --port 4173`. Visit `http://127.0.0.1:4173/CircuitCheck_MultiPlatform/`. For live analysis, use the separate full-application workflows and authenticated server configuration in [DEPLOYMENT.md](DEPLOYMENT.md). It provides one shared private workspace; per-user project isolation is not included.
 
 ## Development and tests
 
@@ -172,7 +180,7 @@ Uploads are limited to 25 MB compressed, 100 MB expanded, 500 entries and 12 arc
 
 Only one native job runs at a time across workers; the queue is bounded. CLI calls use argument arrays, a timeout, stripped credential variables and captured output. Windows Job Objects cap each engine process at 1.5 GiB and terminate its descendants on close. Unix processes have CPU/address-space/output-file limits. A failure to establish Windows limits fails the engine explicitly. A stale running job fails after 10 minutes without a stage update; rerun it after restarting the worker.
 
-**Local-only deployment:** API binding is loopback, accepted Host/Origin values are local, and mutations require a custom header. This is not multi-user authentication or an operating-system security sandbox. Native local jobs still run with the launching user's OS access. Use a dedicated OS account/container for untrusted projects. This build must not be exposed publicly without authentication, ownership checks and protected per-user downloads.
+**Default local deployment:** API binding is loopback, accepted Host/Origin values are local, and mutations require a custom header. This is not multi-user authentication or an operating-system security sandbox. Native local jobs still run with the launching user's OS access. Use a dedicated OS account/container for untrusted projects. The server configuration in `deploy/` protects the entire shared workspace with HTTPS and password authentication and permits only its configured browser origin. Separate user accounts and per-user ownership are not implemented; do not expose the API directly.
 
 Docker/Compose files are supplied with loopback port binding, a non-root user, resource caps, dropped capabilities, read-only root filesystems and a network-disabled worker. Build/run:
 
@@ -180,7 +188,7 @@ Docker/Compose files are supplied with loopback port binding, a non-root user, r
 docker compose up --build
 ```
 
-**Docker was not installed on this host, so neither image build nor Compose execution was verified.** The recipe requests KiCad upstream 10.0.7 from the official KiCad Ubuntu PPA and checks its version; it fails rather than silently installing another engine version if that package is no longer available. Container isolation and Linux limits require verification on the target host.
+**Docker was not installed on this host, so neither image build nor Compose execution was verified.** The recipe downloads the archived official KiCad 10.0.7 Ubuntu package, verifies its published SHA-256 checksum and checks its runtime version. It does not depend on the rolling PPA index retaining older versions. Container isolation and Linux limits require verification on the target host.
 
 Project deletion removes its SQLite records and local artifacts after active jobs finish. Canceled repair previews remain in revision history until project deletion; automatic retention/garbage collection is not implemented. Back up the data directory before external maintenance.
 

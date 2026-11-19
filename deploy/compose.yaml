@@ -1,0 +1,59 @@
+name: circuitcheck
+services:
+  gateway:
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      CIRCUITCHECK_DOMAIN: ${CIRCUITCHECK_DOMAIN:?Set the server domain}
+      CIRCUITCHECK_AUTH_USER: ${CIRCUITCHECK_AUTH_USER:-admin}
+      CIRCUITCHECK_AUTH_HASH: ${CIRCUITCHECK_AUTH_HASH:?Set a bcrypt password hash}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  api:
+    image: ${CIRCUITCHECK_IMAGE:-ghcr.io/mehulafk/circuitcheck_multiplatform:main}
+    environment:
+      CIRCUITCHECK_PUBLIC_URL: https://${CIRCUITCHECK_DOMAIN:?Set the server domain}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4.1-mini}
+    volumes:
+      - designs:/data
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    read_only: true
+    tmpfs: ['/tmp:size=128m,mode=1777']
+    restart: unless-stopped
+  worker:
+    image: ${CIRCUITCHECK_IMAGE:-ghcr.io/mehulafk/circuitcheck_multiplatform:main}
+    command: [python, -m, backend.worker]
+    healthcheck:
+      disable: true
+    volumes:
+      - designs:/data
+    network_mode: none
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    read_only: true
+    tmpfs: ['/tmp:size=256m,mode=1777']
+    restart: unless-stopped
+volumes:
+  designs:
+  certificates:
+  caddy_config:

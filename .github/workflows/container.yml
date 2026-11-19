@@ -1,0 +1,58 @@
+name: Build and publish full application
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build full application with KiCad
+        run: docker build --tag circuitcheck:ci --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+      - name: Run Python and native KiCad tests inside image
+        run: >-
+          docker run --rm --network none --tmpfs /tmp:rw,size=1g
+          --mount type=bind,source="$GITHUB_WORKSPACE/tests",target=/app/tests,readonly
+          --entrypoint python circuitcheck:ci -m pytest -q -p no:cacheprovider tests
+      - name: Verify API and worker together
+        env:
+          CIRCUITCHECK_IMAGE: circuitcheck:ci
+        run: |
+          docker compose up -d --no-build --wait --wait-timeout 120
+          python3 scripts/smoke_deployment.py
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 100
+      - name: Stop CI containers
+        if: always()
+        run: docker compose down --volumes
+      - name: Publish tested image to GitHub Container Registry
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker tag circuitcheck:ci "$image:sha-$GITHUB_SHA"
+          docker push "$image:sha-$GITHUB_SHA"
+          tag=main
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then tag="$GITHUB_REF_NAME"; fi
+          docker tag circuitcheck:ci "$image:$tag"
+          docker push "$image:$tag"
+          printf 'Published `%s:%s` and `%s:sha-%s`\n' "$image" "$tag" "$image" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
