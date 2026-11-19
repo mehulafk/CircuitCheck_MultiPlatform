@@ -85,7 +85,7 @@ npm run test:pages
 python -m pytest -q
 ```
 
-Native integration tests require KiCad 10.0.7. The container workflow supplies it and fails if the required upstream package/version cannot be installed. Local Windows builds can set `PW_CHANNEL=msedge` to use installed Edge. The committed branch-Pages fallback can be refreshed with `npm run build:branch-pages`; its relative paths also work when the repository is renamed.
+Native integration tests require KiCad 10.0.7. The container workflow installs the exact archived official Ubuntu package with its published SHA-256 checksum, then verifies the runtime version; newer PPA releases cannot silently change the engine. Local Windows builds can set `PW_CHANNEL=msedge` to use installed Edge. The committed branch-Pages fallback can be refreshed with `npm run build:branch-pages`; its relative paths also work when the repository is renamed.
 
 ## Feature provenance
 

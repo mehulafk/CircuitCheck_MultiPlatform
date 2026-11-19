@@ -11,11 +11,16 @@ RUN npm run build
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
     CIRCUITCHECK_DATA=/data KICAD_CONFIG_HOME=/data/config KICAD_DOCUMENTS_HOME=/data/documents
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common ca-certificates python3 python3-venv && \
+RUN test "$(dpkg --print-architecture)" = amd64 && \
+    apt-get update && apt-get install -y --no-install-recommends software-properties-common ca-certificates curl python3 python3-venv && \
     add-apt-repository -y ppa:kicad/kicad-10.0-releases && apt-get update && \
-    apt-get install -y --no-install-recommends 'kicad=10.0.7*' && \
+    curl --fail --location --retry 3 \
+      'https://launchpad.net/~kicad/+archive/ubuntu/kicad-10.0-releases/+build/33830754/+files/kicad_10.0.7~ubuntu24.04.1_amd64.deb' \
+      --output /tmp/kicad.deb && \
+    echo 'ce96f7c3bd935a021c65b301427f74c1c16b211210b49ce9b40309ce5ecfbb33  /tmp/kicad.deb' | sha256sum --check - && \
+    apt-get install -y --no-install-recommends /tmp/kicad.deb && \
     test "$(kicad-cli version | tail -n 1)" = '10.0.7' && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/kicad.deb
 WORKDIR /app
 COPY requirements.lock.txt ./
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.lock.txt

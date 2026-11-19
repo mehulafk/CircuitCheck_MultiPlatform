@@ -188,7 +188,7 @@ Docker/Compose files are supplied with loopback port binding, a non-root user, r
 docker compose up --build
 ```
 
-**Docker was not installed on this host, so neither image build nor Compose execution was verified.** The recipe requests KiCad upstream 10.0.7 from the official KiCad Ubuntu PPA and checks its version; it fails rather than silently installing another engine version if that package is no longer available. Container isolation and Linux limits require verification on the target host.
+**Docker was not installed on this host, so neither image build nor Compose execution was verified.** The recipe downloads the archived official KiCad 10.0.7 Ubuntu package, verifies its published SHA-256 checksum and checks its runtime version. It does not depend on the rolling PPA index retaining older versions. Container isolation and Linux limits require verification on the target host.
 
 Project deletion removes its SQLite records and local artifacts after active jobs finish. Canceled repair previews remain in revision history until project deletion; automatic retention/garbage collection is not implemented. Back up the data directory before external maintenance.
 
