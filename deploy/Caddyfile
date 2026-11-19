@@ -1,0 +1,11 @@
+{$CIRCUITCHECK_DOMAIN} {
+	basic_auth {
+		{$CIRCUITCHECK_AUTH_USER} {$CIRCUITCHECK_AUTH_HASH}
+	}
+	request_body {
+		max_size 26MB
+	}
+	reverse_proxy api:8000 {
+		header_up -Authorization
+	}
+}

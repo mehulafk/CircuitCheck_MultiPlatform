@@ -1,7 +1,7 @@
 import {ArrowRight,BookOpen,CircuitBoard,Download,ExternalLink} from 'lucide-react';
 import './pages-preview.css';
 
-const repository='https://github.com/shubhanshuambashta-code/circuitcheck';
+const repository='https://github.com/mehulafk/CircuitCheck_MultiPlatform';
 export default function PagesPreview(){
  const base=import.meta.env.BASE_URL;
  return <div className="pages-preview">

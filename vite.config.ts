@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({mode})=>({
  plugins:[react(),tailwindcss()],
- base:mode==='pages'?'/circuitcheck/':'/',
+ base:mode==='pages'?(process.env.PAGES_BASE_PATH||'/CircuitCheck_MultiPlatform/'):'/',
  build:{outDir:mode==='pages'?'dist-pages':'dist'},
  server:{port:5173,strictPort:true,proxy:{'/api':'http://127.0.0.1:8000'},watch:{ignored:['**/data/**','**/test-results/**','**/playwright-report/**','**/screenshots/**','**/dist-pages/**']}}
 }));
